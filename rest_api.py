@@ -3,10 +3,30 @@ import tempfile
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from markitdown import MarkItDown
 from pydantic import BaseModel
+
+_bearer_scheme = HTTPBearer()
+
+
+def _get_api_token() -> str | None:
+    """Return the configured API token, or None if auth is disabled."""
+    token = os.getenv("MARKITDOWN_API_TOKEN", "").strip()
+    return token if token else None
+
+
+async def verify_token(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+):
+    """Dependency that enforces Bearer token auth when MARKITDOWN_API_TOKEN is set."""
+    expected = _get_api_token()
+    if expected is None:
+        return
+    if credentials.credentials != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing API token")
 
 
 def _plugins_enabled() -> bool:
@@ -54,9 +74,11 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
+    token_required = _get_api_token() is not None
     return {
         "service": "markitdown-rest-api",
         "version": "1.0.0",
+        "auth": "Bearer token required" if token_required else "disabled",
         "endpoints": {
             "POST /convert": "Convert a URI to Markdown",
             "POST /convert/file": "Upload a file and convert to Markdown",
@@ -71,7 +93,7 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/convert", response_model=ConvertResponse)
+@app.post("/convert", response_model=ConvertResponse, dependencies=[Depends(verify_token)])
 async def convert_uri(request: ConvertRequest):
     """Convert a resource at an http:, https:, file:, or data: URI to Markdown."""
     try:
@@ -81,7 +103,7 @@ async def convert_uri(request: ConvertRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/convert/file", response_model=ConvertResponse)
+@app.post("/convert/file", response_model=ConvertResponse, dependencies=[Depends(verify_token)])
 async def convert_file(file: UploadFile = File(...)):
     """Upload a file and convert its contents to Markdown."""
     suffix = ""
