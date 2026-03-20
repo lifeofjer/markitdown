@@ -3,31 +3,24 @@ FROM python:3.13-slim-bullseye
 ENV DEBIAN_FRONTEND=noninteractive
 ENV EXIFTOOL_PATH=/usr/bin/exiftool
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
+ENV MARKITDOWN_ENABLE_PLUGINS=true
 
-# Runtime dependency
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    exiftool
-
-ARG INSTALL_GIT=false
-RUN if [ "$INSTALL_GIT" = "true" ]; then \
-    apt-get install -y --no-install-recommends \
-    git; \
-    fi
-
-# Cleanup
-RUN rm -rf /var/lib/apt/lists/*
+    exiftool \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . /app
+COPY packages/ /app/packages/
+COPY rest_api.py /app/rest_api.py
+
 RUN pip --no-cache-dir install \
     /app/packages/markitdown[all] \
-    /app/packages/markitdown-sample-plugin
+    /app/packages/markitdown-mcp \
+    /app/packages/markitdown-sample-plugin \
+    fastapi \
+    python-multipart
 
-# Default USERID and GROUPID
-ARG USERID=nobody
-ARG GROUPID=nogroup
+EXPOSE 8000
 
-USER $USERID:$GROUPID
-
-ENTRYPOINT [ "markitdown" ]
+CMD ["uvicorn", "rest_api:app", "--host", "0.0.0.0", "--port", "8000"]
