@@ -8,6 +8,7 @@ ENV MARKITDOWN_ENABLE_PLUGINS=true
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     exiftool \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
