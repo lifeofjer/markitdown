@@ -38,7 +38,17 @@ def _plugins_enabled() -> bool:
 
 
 def _get_converter() -> MarkItDown:
-    return MarkItDown(enable_plugins=_plugins_enabled())
+    kwargs: dict = {"enable_plugins": _plugins_enabled()}
+    api_key = os.getenv("LLM_API_KEY", "").strip()
+    if api_key:
+        from openai import OpenAI
+
+        kwargs["llm_client"] = OpenAI(
+            api_key=api_key,
+            base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1"),
+        )
+        kwargs["llm_model"] = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    return MarkItDown(**kwargs)
 
 
 class ConvertRequest(BaseModel):
@@ -90,7 +100,12 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    llm_configured = bool(os.getenv("LLM_API_KEY", "").strip())
+    return {
+        "status": "ok",
+        "ocr_enabled": llm_configured,
+        "llm_model": os.getenv("LLM_MODEL", "gpt-4o-mini") if llm_configured else None,
+    }
 
 
 @app.post("/convert", response_model=ConvertResponse, dependencies=[Depends(verify_token)])

@@ -18,7 +18,9 @@ COPY rest_api.py /app/rest_api.py
 RUN pip --no-cache-dir install \
     /app/packages/markitdown[all] \
     /app/packages/markitdown-mcp \
+    /app/packages/markitdown-ocr \
     /app/packages/markitdown-sample-plugin \
+    openai \
     fastapi \
     python-multipart
 

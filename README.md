@@ -30,6 +30,49 @@ MarkItDown currently supports the conversion from:
 - EPubs
 - ... and more!
 
+## REST API (Railway Template)
+
+This fork includes a FastAPI REST API (`rest_api.py`) and Dockerfile for one-click deployment to Railway.
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MARKITDOWN_API_TOKEN` | No | *(none)* | Bearer token for API authentication. If unset, auth is disabled. |
+| `MARKITDOWN_ENABLE_PLUGINS` | No | `true` | Enable MarkItDown plugins (including OCR). |
+| `LLM_API_KEY` | No | *(none)* | API key for an OpenAI-compatible LLM. **Enables vision-based OCR for scanned PDFs, images in DOCX/PPTX/XLSX.** If unset, only text-layer extraction is available. |
+| `LLM_BASE_URL` | No | `https://api.openai.com/v1` | Base URL for the LLM provider. Change this to use a different provider. |
+| `LLM_MODEL` | No | `gpt-4o-mini` | Vision-capable model to use for OCR. |
+
+### Provider Examples
+
+**OpenAI** (default):
+```
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+```
+
+**Mistral**:
+```
+LLM_API_KEY=your-mistral-key
+LLM_BASE_URL=https://api.mistral.ai/v1
+LLM_MODEL=pixtral-large-latest
+```
+
+**Google Gemini**:
+```
+LLM_API_KEY=your-gemini-key
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_MODEL=gemini-2.0-flash
+```
+
+### API Endpoints
+
+- `POST /convert` -- Convert a URI to Markdown (`{"uri": "https://..."}`)
+- `POST /convert/file` -- Upload a file and convert to Markdown (multipart form)
+- `GET /health` -- Health check (also shows OCR status)
+- `GET /docs` -- Interactive Swagger UI
+
 ## Why Markdown?
 
 Markdown is extremely close to plain text, with minimal markup or formatting, but still
